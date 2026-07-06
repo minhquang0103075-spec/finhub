@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub — Đăng nhập</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap"><div class="auth-card" id="auth"></div></main>
+<div id="site-footer"></div>
+
+<script src="/js/app.js?v=4"></script>
+<script>
+let mode = 'login'; // or 'register'
+const next = new URLSearchParams(location.search).get('next') || '/';
+
+async function boot(){
+  await initChrome('');
+  if(ME){ location.href = next; return; }
+  render();
+}
+
+function render(){
+  const el = document.getElementById('auth');
+  const isReg = mode==='register';
+  el.innerHTML = `
+    <h1>${isReg?t('signup'):t('signin')}</h1>
+    <p class="muted" style="margin-top:0;font-family:var(--sans);font-size:13px">FinHub</p>
+    ${isReg?`<div class="field"><label>${t('name')}</label><input type="text" id="name"></div>`:''}
+    <div class="field"><label>${t('email')}</label><input type="email" id="email" autocomplete="username"></div>
+    <div class="field"><label>${t('password')}</label><input type="password" id="password" autocomplete="current-password"></div>
+    <button class="btn red" style="width:100%" onclick="submit()">${isReg?t('signup'):t('signin')}</button>
+    <div id="msg"></div>
+    <p class="center muted" style="margin-top:18px;font-family:var(--sans);font-size:13px">
+      ${isReg?t('have_account'):t('no_account')}
+      <a style="color:var(--red);font-weight:700;cursor:pointer" onclick="toggle()">${isReg?t('signin'):t('signup')}</a>
+    </p>`;
+}
+
+function toggle(){ mode = mode==='login'?'register':'login'; render(); }
+
+async function submit(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const name = document.getElementById('name') ? document.getElementById('name').value.trim() : '';
+  const path = mode==='register' ? '/api/register' : '/api/login';
+  const body = mode==='register' ? {email,password,name} : {email,password};
+  try {
+    await api(path,{method:'POST',body});
+    location.href = next;
+  } catch(e){
+    document.getElementById('msg').innerHTML = `<p class="notice err">${e.message}</p>`;
+  }
+}
+boot();
+</script>
+</body>
+</html>

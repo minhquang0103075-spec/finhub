@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub — Thành viên</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap" id="m" style="padding-bottom:60px"><p class="muted" style="padding:30px 0">Đang tải…</p></main>
+<div id="site-footer"></div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script src="/js/app.js?v=4"></script>
+<script>
+let PLANS = [];
+
+async function load(){
+  await initChrome('nav_membership');
+  const { plans } = await api('/api/plans');
+  PLANS = plans;
+  const L = LANG;
+  const cards = plans.map(p=>`
+    <div class="plan ${p.popular?'popular':''}">
+      <h3>${p['name_'+L]}</h3>
+      <div class="price">${fmtVND(p.priceVND)} <small>/ ${p.durationDays>=3650?(L==='vi'?'trọn đời':'lifetime'):p.durationDays+ (L==='vi'?' ngày':'d')}</small></div>
+      <div class="tag">${p['tagline_'+L]}</div>
+      <ul>${p['features_'+L].map(f=>`<li>${f}</li>`).join('')}</ul>
+      <button class="btn ${p.popular?'red':''}" onclick="buy('${p.id}')">${t('choose')}</button>
+    </div>`).join('');
+
+  document.getElementById('m').innerHTML = `
+    <div style="padding:30px 0 6px;max-width:720px">
+      <div class="kicker">${t('nav_membership')}</div>
+      <h1 style="font-size:38px;margin:8px 0 6px">${t('membership_title')}</h1>
+      <p style="font-size:18px;font-style:italic;color:#333">${t('membership_sub')}</p>
+    </div>
+    <div class="plans">${cards}</div>`;
+}
+
+async function buy(planId){
+  if(!requireLogin()) return;
+  const modal = document.getElementById('modal');
+  const box = document.getElementById('modal-content');
+  box.innerHTML = `<p class="muted">${t('loading')}</p>`;
+  modal.classList.add('open');
+  let res;
+  try { res = await api('/api/orders',{method:'POST',body:{planId}}); }
+  catch(e){ box.innerHTML = `<p class="notice err">${e.message}</p><button class="btn" onclick="closeModal()">${t('close')}</button>`; return; }
+  const { order, bank, qrUrl } = res;
+
+  box.innerHTML = `
+    <h3>${t('pay_title')}</h3>
+    <p class="muted" style="font-family:var(--sans);font-size:13px">${t('pay_sub')}</p>
+    <div class="qr-wrap"><img src="${qrUrl}" alt="VietQR" width="240" height="300"></div>
+    <div class="pay-rows">
+      <div class="r"><span>${t('bank')}</span><b>${bank.bankId}</b></div>
+      <div class="r"><span>${t('account_no')}</span><b>${bank.accountNo} <span class="copy" onclick="copyText('${bank.accountNo}',this)">${t('copy')}</span></b></div>
+      <div class="r"><span>${t('account_name')}</span><b>${bank.accountName}</b></div>
+      <div class="r"><span>${t('amount')}</span><b>${fmtVND(order.amountVND)}</b></div>
+      <div class="r"><span>${t('memo')}</span><b style="color:var(--red)">${order.memo} <span class="copy" onclick="copyText('${order.memo}',this)">${t('copy')}</span></b></div>
+    </div>
+    <p class="muted" style="font-family:var(--sans);font-size:12.5px;margin-top:14px">${t('pay_note')}</p>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn red" onclick="markPaid('${order.id}')">${t('paid_done')}</button>
+      <button class="btn ghost" onclick="closeModal()">${t('close')}</button>
+    </div>
+    <div id="paymsg"></div>`;
+}
+
+async function markPaid(orderId){
+  try { await api('/api/orders/'+orderId+'/mark-paid',{method:'POST'}); }
+  catch(e){}
+  document.getElementById('paymsg').innerHTML =
+    `<p class="notice ok" style="margin-top:10px">${t('pay_note')}</p>`;
+  setTimeout(()=>{ closeModal(); location.href='/account.html'; }, 1600);
+}
+
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeModal(); });
+load();
+</script>
+</body>
+</html>

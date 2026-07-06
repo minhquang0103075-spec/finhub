@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub — Báo cáo vĩ mô Việt Nam</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap" style="padding-bottom:20px">
+  <div class="rpt-head">
+    <div class="kicker">BÁO CÁO VĨ MÔ</div>
+    <h1 id="r-title"></h1>
+    <div class="srcline" id="r-srcline"></div>
+  </div>
+  <div class="headline-band"><div class="h" id="r-hl"></div><p id="r-hltext"></p></div>
+  <div class="kpi-grid" id="r-kpis"></div>
+  <div class="warn-band" id="r-warn"></div>
+  <div class="macro-tabs" id="r-tabs"></div>
+  <div id="r-panel"></div>
+  <div class="sources-box" id="r-sources"></div>
+  <p class="macro-note" style="margin-top:22px">Báo cáo kể chuyện số liệu — <b>KHÔNG</b> phải khuyến nghị đầu tư. Dữ liệu cập nhật hàng tháng trong <b>js/macro-data.js</b>. Biểu đồ minh họa xu hướng 12 tháng.</p>
+</main>
+<div id="site-footer"></div>
+
+<script src="/js/macro-data.js?v=4"></script>
+<script src="/js/app.js?v=4"></script>
+<script>
+let charts=[], ACTIVE='real';
+const RED='#E3120B',NAVY='#1f4e79',TEAL='#2a9d8f',AMBER='#e8871e',GRAY='#9a9a90';
+function esc2(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function boot(){
+  await initChrome('nav_macro');
+  const R=REPORT, m=R.meta;
+  document.getElementById('r-title').textContent = m.title_vi+' · '+m.period;
+  document.getElementById('r-srcline').textContent = m.sourcesLine;
+  document.getElementById('r-hl').textContent = '⚖️ '+R.headline.tag;
+  document.getElementById('r-hltext').textContent = R.headline.text;
+  document.getElementById('r-warn').innerHTML = '⚠️ '+esc2(R.warning);
+  document.getElementById('r-kpis').innerHTML = R.kpis.map(k=>`
+    <div class="kpi"><div class="label">${esc2(k.label)}</div>
+      <div class="value">${k.value}<small> ${esc2(k.unit)}</small></div>
+      <div class="chg ${k.dir}"><span class="arrow">${k.dir==='up'?'▲':'▼'}</span> ${esc2(k.chg)}</div></div>`).join('');
+  document.getElementById('r-sources').innerHTML = `<h4>Nguồn dữ liệu (${R.sources.length}/5)</h4>` +
+    R.sources.map(s=>`<div class="s"><a href="${s.url}" target="_blank" rel="noopener">${esc2(s.name)}</a> <small>— ${esc2(s.note)}</small></div>`).join('');
+  renderTabs(); showTab('real');
+}
+
+function renderTabs(){
+  document.getElementById('r-tabs').innerHTML = REPORT.tabs.map(t=>
+    `<button class="${t.id===ACTIVE?'active':''}" onclick="showTab('${t.id}')">${esc2(t.title)}</button>`).join('');
+}
+function destroy(){ charts.forEach(c=>c.destroy()); charts=[]; }
+
+function metricsHTML(mx){ return (!mx||!mx.length)?'':`<div class="metrics">${mx.map(([k,v])=>`<span>${esc2(k)} <b>${esc2(v)}</b></span>`).join('')}</div>`; }
+function cardHTML(c,i){
+  return `<div class="dcard">
+    <div class="top"><span class="flag">${c.flag||''}</span><h3>${esc2(c.title)}</h3></div>
+    ${c.value!==''?`<div class="val">${esc2(c.value)} <small>${esc2(c.unit)}</small></div>`:''}
+    ${c.sub?`<div class="sub">${esc2(c.sub)}</div>`:''}
+    ${c.chart?`<div class="cwrap"><canvas id="rc-${ACTIVE}-${i}"></canvas></div>`:''}
+    ${metricsHTML(c.metrics)}
+    ${c.note?`<div class="note">⚠️ ${esc2(c.note)}</div>`:''}
+    ${c.narrative?`<div class="narr">${esc2(c.narrative)}</div>`:''}
+    <div class="src">📍 ${esc2(c.source)}</div>
+  </div>`;
+}
+function tableHTML(tb){
+  return `<div class="rpt-table">
+    <div class="tt"><span class="flag">${tb.flag||''}</span><h3>${esc2(tb.title)}</h3></div>
+    ${tb.note?`<div class="tnote">${esc2(tb.note)}</div>`:''}
+    <table><thead><tr>${tb.head.map(h=>`<th>${esc2(h)}</th>`).join('')}</tr></thead>
+    <tbody>${tb.rows.map(r=>`<tr>${r.map(c=>`<td>${esc2(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+    ${tb.foot?`<div class="tfoot">${esc2(tb.foot)}</div>`:''}
+  </div>`;
+}
+
+function showTab(id){
+  ACTIVE=id; renderTabs(); destroy();
+  const t = REPORT.tabs.find(x=>x.id===id);
+  const p = document.getElementById('r-panel');
+  let html = `<p class="sub" style="font-family:var(--sans);color:var(--muted);font-size:13px;margin:2px 0 14px">${esc2(t.subtitle||'')}</p>`;
+
+  if(id==='summary'){
+    html += `<div class="sumcol"><h2>⚠️ Rủi ro</h2>` +
+      t.risks.map(([sev,txt])=>`<div class="sum-item"><span class="sev ${sev}">${sev}</span><div>${esc2(txt)}</div></div>`).join('') + `</div>`;
+    html += `<div class="sumcol"><h2>🚀 Động lực tích cực</h2>` +
+      t.drivers.map(([sev,txt])=>`<div class="sum-item"><span class="sev ${sev}">${sev}</span><div>${esc2(txt)}</div></div>`).join('') + `</div>`;
+    html += `<div class="sumcol"><h2>🎯 Ba điểm chốt</h2><ol class="takeaway">` +
+      t.takeaways.map(x=>`<li>${esc2(x)}</li>`).join('') + `</ol></div>`;
+    p.innerHTML = html;
+    return;
+  }
+
+  if(t.neg||t.pos){
+    html += `<div class="posneg">
+      <div class="pn-col neg"><h4>🔴 Tiêu cực</h4><ul>${(t.neg||[]).map(x=>`<li>${esc2(x)}</li>`).join('')}</ul></div>
+      <div class="pn-col pos"><h4>🟢 Tích cực</h4><ul>${(t.pos||[]).map(x=>`<li>${esc2(x)}</li>`).join('')}</ul></div>
+    </div>`;
+  }
+  if(t.cards&&t.cards.length){ html += `<div class="dcards">${t.cards.map((c,i)=>cardHTML(c,i)).join('')}</div>`; }
+  if(t.tables&&t.tables.length){ html += t.tables.map(tableHTML).join(''); }
+  p.innerHTML = html;
+
+  // draw charts referenced by cards
+  t.cards && t.cards.forEach((c,i)=>{ if(c.chart) drawChart('rc-'+id+'-'+i, c.chart); });
+}
+
+const BASE=(unit)=>({responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.formattedValue+(unit?' '+unit:'')}}},
+  scales:{x:{grid:{display:false},ticks:{font:{family:'Inter',size:9},color:'#6b6b6b'}},
+          y:{grid:{color:'rgba(217,217,210,.6)'},ticks:{font:{family:'Inter',size:9},color:'#6b6b6b'}}}});
+function push(cv,cfg){const el=document.getElementById(cv);if(el)charts.push(new Chart(el,cfg));}
+
+function drawChart(cv,type){
+  const s=REPORT.series, mo=s.months||REPORT.months;
+  if(type==='cpi') push(cv,{type:'line',data:{labels:mo,datasets:[{data:s.cpi,borderColor:RED,backgroundColor:'rgba(227,18,11,.12)',borderWidth:2,tension:.3,pointRadius:0,fill:true}]},options:BASE('%')});
+  else if(type==='pmi'){const o=BASE('');o.scales.y.suggestedMin=48;o.scales.y.suggestedMax=54;
+    push(cv,{type:'line',data:{labels:mo,datasets:[{data:s.pmi,borderColor:NAVY,backgroundColor:'rgba(31,78,121,.12)',borderWidth:2,tension:.3,pointRadius:0,fill:true},{data:mo.map(()=>50),borderColor:RED,borderWidth:1,borderDash:[5,4],pointRadius:0}]},options:o});}
+  else if(type==='trade'){const o=BASE('tỷ USD');o.plugins.legend.display=true;o.plugins.legend.labels={font:{family:'Inter',size:10}};
+    push(cv,{type:'line',data:{labels:mo,datasets:[{label:'Xuất khẩu',data:s.exports,borderColor:RED,borderWidth:2,tension:.3,pointRadius:0},{label:'Nhập khẩu',data:s.imports,borderColor:NAVY,borderWidth:2,tension:.3,pointRadius:0}]},options:o});}
+  else if(type==='ib_terms'){const d=s.ib_terms;const o=BASE('%');o.plugins.legend.display=true;o.plugins.legend.labels={font:{family:'Inter',size:10}};
+    push(cv,{type:'bar',data:{labels:d.labels,datasets:[{label:'26/6',data:d.now,backgroundColor:NAVY+'cc'},{label:'19/6',data:d.prev,backgroundColor:GRAY+'99'}]},options:o});}
+  else if(type==='bond_curve'){const d=s.bond_curve;
+    push(cv,{type:'line',data:{labels:d.labels,datasets:[{data:d.y,borderColor:TEAL,backgroundColor:'rgba(42,157,143,.12)',borderWidth:2,tension:.3,pointRadius:3,fill:true}]},options:BASE('%')});}
+}
+boot();
+</script>
+</body>
+</html>

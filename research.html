@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub — Nghiên cứu khoa học</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap" id="rs" style="padding-bottom:60px"><p class="muted" style="padding:30px 0">Đang tải…</p></main>
+<div id="site-footer"></div>
+
+<script src="/js/app.js?v=4"></script>
+<script>
+async function load(){
+  await initChrome('nav_research');
+  const main = document.getElementById('rs');
+  const L = LANG;
+  let data, me;
+  try { data = await api('/api/research'); } catch(e){ main.innerHTML=`<p class="notice err">${e.message}</p>`; return; }
+  const member = ME && (ME.memberActive || ME.role==='admin');
+
+  const T = {
+    vi:{ kicker:'NGHIÊN CỨU KHOA HỌC', title:'Thư viện Nghiên cứu', dek:'Các bài nghiên cứu, báo cáo và phân tích chuyên sâu do nhóm biên tập FinHub thực hiện.',
+      buy:'Mua trọn bộ nghiên cứu', buysub:'Một lần thanh toán — đọc & tải toàn bộ bài báo trọn đời.',
+      by:'Nhóm tác giả', read:'Đọc / Tải PDF', locked:'Bài trả phí', unlock:'Mở khóa bằng gói Trọn bộ', pdfsoon:'Bản PDF sẽ được cập nhật.' },
+    en:{ kicker:'RESEARCH', title:'Research Library', dek:'In-depth papers, reports and analyses produced by the FinHub editorial team.',
+      buy:'Buy all-access research', buysub:'One payment — read & download every paper, for life.',
+      by:'Authors', read:'Read / Download PDF', locked:'Paid paper', unlock:'Unlock with the All-Access bundle', pdfsoon:'PDF will be added soon.' }
+  }[L];
+
+  const cards = data.research.map(r=>{
+    const locked = r.premium && !member;
+    const title = r['title_'+L], abs = r['abstract_'+L];
+    let action;
+    if(locked) action = `<a class="btn red small" href="/membership.html">${T.unlock}</a>`;
+    else action = `<button class="btn small" onclick="openPaper('${r.id}')">${T.read}</button>`;
+    return `<article class="dcard" style="grid-column:1/-1">
+      <div class="top">
+        ${r.premium?`<span class="lock-tag">${T.locked}</span>`:''}
+        <h3 style="font-size:20px">${esc(title)}</h3>
+      </div>
+      <div class="byline" style="margin:2px 0 8px">${T.by}: ${esc(r.authors||r.author)} · ${fmtDate(r.createdAt)}${r.tags?' · '+esc(r.tags):''}</div>
+      <div class="narr">${esc(abs)}</div>
+      <div id="paper-${r.id}"></div>
+      <div style="margin-top:6px">${action}</div>
+    </article>`;
+  }).join('') || `<p class="muted">—</p>`;
+
+  main.innerHTML = `
+    <div class="macro-hero">
+      <div class="kicker">${T.kicker}</div>
+      <h1 style="font-family:var(--display);font-weight:800;font-size:36px;margin:6px 0 4px">${T.title}</h1>
+      <p class="dek">${T.dek}</p>
+    </div>
+    <div class="headline-band" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+      <div><div class="h">${T.buy}</div><p style="font-size:15px">${T.buysub}</p></div>
+      <a class="btn red" href="/membership.html">${T.buy} →</a>
+    </div>
+    <div class="dcards" style="grid-template-columns:1fr">${cards}</div>`;
+}
+
+async function openPaper(id){
+  const box = document.getElementById('paper-'+id);
+  try {
+    const { research } = await api('/api/research/'+id);
+    if(research.locked){ box.innerHTML = `<p class="notice">${LANG==='en'?'Members only.':'Chỉ dành cho thành viên.'}</p>`; return; }
+    if(research.fileUrl) box.innerHTML = `<p><a class="btn small red" href="${research.fileUrl}" target="_blank" rel="noopener">⬇ PDF</a></p>`;
+    else box.innerHTML = `<p class="muted" style="font-family:var(--sans);font-size:12px">${LANG==='en'?'PDF will be added soon.':'Bản PDF sẽ được cập nhật.'}</p>`;
+  } catch(e){ box.innerHTML = `<p class="notice err">${e.message}</p>`; }
+}
+load();
+</script>
+</body>
+</html>

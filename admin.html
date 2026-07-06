@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub — Quản trị</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap" id="ad" style="padding-bottom:60px"></main>
+<div id="site-footer"></div>
+
+<script src="/js/app.js?v=4"></script>
+<script>
+let TAB = 'orders';
+
+async function load(){
+  await initChrome('');
+  if(!ME || ME.role!=='admin'){ document.getElementById('ad').innerHTML = `<p class="notice err" style="margin-top:30px">403 — Admin only. <a href="/login.html">Sign in</a></p>`; return; }
+  render();
+}
+
+function render(){
+  document.getElementById('ad').innerHTML = `
+    <div style="padding:26px 0 10px">
+      <h1 style="font-size:30px;margin:0">${t('admin_title')}</h1>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn ${TAB==='orders'?'red':'ghost'}" onclick="switchTab('orders')">${t('tab_orders')}</button>
+        <button class="btn ${TAB==='new'?'red':'ghost'}" onclick="switchTab('new')">${t('tab_new')}</button>
+        <button class="btn ${TAB==='research'?'red':'ghost'}" onclick="switchTab('research')">Nghiên cứu (NCKH)</button>
+      </div>
+    </div>
+    <div id="tab"></div>`;
+  if(TAB==='orders') renderOrders(); else if(TAB==='new') renderNew(); else renderResearch();
+}
+function switchTab(t0){ TAB=t0; render(); }
+
+async function renderOrders(){
+  const { orders } = await api('/api/admin/orders');
+  const rows = orders.map(o=>`
+    <tr>
+      <td>${fmtDate(o.createdAt)}</td>
+      <td>${esc(o.userEmail)}</td>
+      <td>${o.planId}</td>
+      <td>${fmtVND(o.amountVND)}</td>
+      <td><code>${o.memo}</code></td>
+      <td><span class="pill ${o.status}">${o.status}</span></td>
+      <td>
+        ${o.status!=='paid'?`<button class="btn small red" onclick="confirmOrder('${o.id}')">${t('confirm')}</button>`:''}
+        ${o.status==='pending'||o.status==='reviewing'?`<button class="btn small ghost" onclick="rejectOrder('${o.id}')">${t('reject')}</button>`:''}
+      </td>
+    </tr>`).join('') || `<tr><td colspan="7" class="muted">—</td></tr>`;
+  document.getElementById('tab').innerHTML = `
+    <table>
+      <thead><tr><th>${t('date')}</th><th>${t('user')}</th><th>${t('plan')}</th><th>${t('amount')}</th><th>${t('memo')}</th><th>${t('status')}</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+async function confirmOrder(id){ await api('/api/admin/orders/'+id+'/confirm',{method:'POST'}); renderOrders(); }
+async function rejectOrder(id){ await api('/api/admin/orders/'+id+'/reject',{method:'POST'}); renderOrders(); }
+
+function renderNew(){
+  document.getElementById('tab').innerHTML = `
+    <div style="max-width:680px">
+      <div class="field"><label>${t('section')} (VI)</label><input type="text" id="sec_vi" placeholder="Tài chính"></div>
+      <div class="field"><label>${t('section')} (EN)</label><input type="text" id="sec_en" placeholder="Finance"></div>
+      <div class="field"><label>${t('title')} (VI)</label><input type="text" id="title_vi"></div>
+      <div class="field"><label>${t('title')} (EN)</label><input type="text" id="title_en"></div>
+      <div class="field"><label>${t('dek')} (VI)</label><input type="text" id="dek_vi"></div>
+      <div class="field"><label>${t('dek')} (EN)</label><input type="text" id="dek_en"></div>
+      <div class="field"><label>${t('body')} (VI)</label><textarea id="body_vi" style="min-height:140px"></textarea></div>
+      <div class="field"><label>${t('body')} (EN)</label><textarea id="body_en" style="min-height:140px"></textarea></div>
+      <div class="field"><label><input type="checkbox" id="premium" style="width:auto"> ${t('premium_q')}</label></div>
+      <div class="field"><label><input type="checkbox" id="lead" style="width:auto"> ${t('lead_q')}</label></div>
+      <button class="btn red" onclick="publish()">${t('publish')}</button>
+      <div id="pubmsg"></div>
+    </div>`;
+}
+
+async function publish(){
+  const g = id => document.getElementById(id).value.trim();
+  const body = {
+    section_vi:g('sec_vi'), section_en:g('sec_en'),
+    title_vi:g('title_vi'), title_en:g('title_en'),
+    dek_vi:g('dek_vi'), dek_en:g('dek_en'),
+    body_vi:g('body_vi'), body_en:g('body_en'),
+    premium: document.getElementById('premium').checked,
+    lead: document.getElementById('lead').checked
+  };
+  try {
+    const { article } = await api('/api/articles',{method:'POST',body});
+    document.getElementById('pubmsg').innerHTML = `<p class="notice ok">✓ <a href="/article.html?id=${article.id}">${article.title_vi}</a></p>`;
+  } catch(e){ document.getElementById('pubmsg').innerHTML = `<p class="notice err">${e.message}</p>`; }
+}
+
+async function renderResearch(){
+  let list=[];
+  try{ list=(await api('/api/research')).research; }catch(e){}
+  const rows = list.map(r=>`<tr>
+      <td>${esc(r.title_vi||r.title_en)}</td>
+      <td>${esc(r.authors||'')}</td>
+      <td>${r.premium?'Trả phí':'Miễn phí'}</td>
+      <td><button class="btn small ghost" onclick="delResearch('${r.id}')">Xóa</button></td>
+    </tr>`).join('') || `<tr><td colspan="4" class="muted">—</td></tr>`;
+  document.getElementById('tab').innerHTML = `
+    <div style="max-width:680px">
+      <h3 style="font-family:var(--sans);font-size:14px;text-transform:uppercase;letter-spacing:.05em">Đăng bài nghiên cứu (NCKH)</h3>
+      <div class="field"><label>Tiêu đề (VI)</label><input type="text" id="rt_vi"></div>
+      <div class="field"><label>Tiêu đề (EN)</label><input type="text" id="rt_en"></div>
+      <div class="field"><label>Nhóm tác giả</label><input type="text" id="r_auth" placeholder="Trần A., Nguyễn B."></div>
+      <div class="field"><label>Tóm tắt (VI)</label><textarea id="ra_vi"></textarea></div>
+      <div class="field"><label>Tóm tắt (EN)</label><textarea id="ra_en"></textarea></div>
+      <div class="field"><label>Link PDF (nếu có)</label><input type="text" id="r_file" placeholder="https://... hoặc /files/bai.pdf"></div>
+      <div class="field"><label>Thẻ/chủ đề</label><input type="text" id="r_tags" placeholder="Tài chính, Thị trường"></div>
+      <div class="field"><label><input type="checkbox" id="r_prem" style="width:auto"> Bài trả phí (chỉ thành viên / mua Trọn bộ)</label></div>
+      <button class="btn red" onclick="publishResearch()">Đăng nghiên cứu</button>
+      <div id="rpmsg"></div>
+      <h3 style="margin-top:26px;font-family:var(--sans);font-size:14px;text-transform:uppercase;letter-spacing:.05em">Đã đăng</h3>
+      <table><thead><tr><th>Tiêu đề</th><th>Tác giả</th><th>Loại</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+}
+async function publishResearch(){
+  const g=id=>document.getElementById(id).value.trim();
+  const body={ title_vi:g('rt_vi'), title_en:g('rt_en'), authors:g('r_auth'), abstract_vi:g('ra_vi'),
+    abstract_en:g('ra_en'), fileUrl:g('r_file'), tags:g('r_tags'), premium:document.getElementById('r_prem').checked };
+  try{ await api('/api/research',{method:'POST',body}); document.getElementById('rpmsg').innerHTML='<p class="notice ok">✓ Đã đăng</p>'; setTimeout(renderResearch,700); }
+  catch(e){ document.getElementById('rpmsg').innerHTML=`<p class="notice err">${e.message}</p>`; }
+}
+async function delResearch(id){ try{ await api('/api/research/'+id,{method:'DELETE'}); renderResearch(); }catch(e){} }
+load();
+</script>
+</body>
+</html>

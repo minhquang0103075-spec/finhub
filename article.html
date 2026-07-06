@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap" id="art"><p class="muted" style="padding:30px 0">Đang tải…</p></main>
+<div class="wrap"><div id="comments"></div></div>
+<div id="site-footer"></div>
+
+<script src="/js/app.js?v=4"></script>
+<script>
+const AID = new URLSearchParams(location.search).get('id');
+
+async function load(){
+  await initChrome('nav_home');
+  const wrap = document.getElementById('art');
+  let data;
+  try { data = await api('/api/articles/'+AID); }
+  catch(e){ wrap.innerHTML = `<p class="notice err">${e.message}</p>`; return; }
+  const a = data.article, L = LANG;
+  const title = a['title_'+L], dek = a['dek_'+L], sec = a['section_'+L], body = a['body_'+L];
+
+  wrap.innerHTML = `
+    <article class="article">
+      <div class="kicker">${sec}</div>
+      <h1>${title}</h1>
+      <div class="dek">${dek}</div>
+      <div class="meta">
+        <span>${t('by')} ${a.author}</span>
+        <span>${fmtDate(a.createdAt)}</span>
+        <span>${readMins(body)+ (a.locked?4:0)} ${t('min_read')}</span>
+        ${a.premium?`<span class="lock-tag">${t('members_only')}</span>`:''}
+      </div>
+      <div class="body ${a.locked?'paywall':''}">${body}</div>
+      ${a.locked ? `
+        <div class="paywall-box">
+          <h3>${t('paywall_title')}</h3>
+          <p>${t('paywall_text')}</p>
+          <a class="btn red" href="/membership.html">${t('become_member')}</a>
+        </div>` : ''}
+    </article>`;
+
+  renderComments();
+}
+
+async function renderComments(){
+  const box = document.getElementById('comments');
+  const { comments } = await api('/api/articles/'+AID+'/comments');
+  const list = comments.map(c=>`
+    <div class="comment">
+      <span class="who">${esc(c.author)}</span><span class="when">${fmtDate(c.createdAt)}</span>
+      <p>${esc(c.body)}</p>
+    </div>`).join('') || `<p class="muted">—</p>`;
+
+  const form = ME ? `
+    <div class="field" style="margin-top:16px">
+      <textarea id="cbody" placeholder="${t('write_comment')}"></textarea>
+    </div>
+    <button class="btn red" onclick="addComment()">${t('post')}</button>
+    <div id="cmsg"></div>` :
+    `<p class="muted">${t('login_to_comment')} <a href="/login.html" style="color:var(--red)">${t('signin')}</a></p>`;
+
+  box.innerHTML = `<div class="comments">
+    <h3>${t('comments')} (${comments.length})</h3>
+    ${list}
+    ${form}
+  </div>`;
+}
+
+async function addComment(){
+  const body = document.getElementById('cbody').value.trim();
+  if(!body) return;
+  try {
+    await api('/api/articles/'+AID+'/comments',{method:'POST',body:{body}});
+    renderComments();
+  } catch(e){ document.getElementById('cmsg').innerHTML = `<p class="notice err">${e.message}</p>`; }
+}
+load();
+</script>
+</body>
+</html>

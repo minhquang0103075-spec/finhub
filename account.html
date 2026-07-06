@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub — Tài khoản</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap" id="a" style="padding-bottom:60px;max-width:820px"></main>
+<div id="site-footer"></div>
+
+<script src="/js/app.js?v=4"></script>
+<script>
+async function load(){
+  await initChrome('');
+  if(!requireLogin()) return;
+  const { orders } = await api('/api/orders/mine');
+  const m = ME.membership;
+  const memberLine = ME.memberActive
+    ? `<span class="pill paid">${t('member_until')} ${fmtDate(m.expiresAt)}</span>`
+    : `<span class="pill pending">${t('not_member')}</span>`;
+
+  const rows = orders.map(o=>`
+    <tr>
+      <td>${fmtDate(o.createdAt)}</td>
+      <td>${o.planId}</td>
+      <td>${fmtVND(o.amountVND)}</td>
+      <td><code>${o.memo}</code></td>
+      <td><span class="pill ${o.status}">${o.status}</span></td>
+    </tr>`).join('') || `<tr><td colspan="5" class="muted">—</td></tr>`;
+
+  document.getElementById('a').innerHTML = `
+    <div style="padding:30px 0 10px">
+      <h1 style="font-size:32px;margin:0">${t('account_title')}</h1>
+      <p style="font-family:var(--sans);font-size:14px">${esc(ME.name)} · ${esc(ME.email)}</p>
+      <p>${t('status')}: ${memberLine}
+        ${ME.memberActive?'':`<a class="btn red small" style="margin-left:8px" href="/membership.html">${t('become_member')}</a>`}
+      </p>
+    </div>
+    <h3 style="font-family:var(--sans);font-size:14px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--ink);padding-bottom:6px">${t('my_orders')}</h3>
+    <table>
+      <thead><tr><th>${t('date')}</th><th>${t('plan')}</th><th>${t('amount')}</th><th>${t('memo')}</th><th>${t('status')}</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+load();
+</script>
+</body>
+</html>

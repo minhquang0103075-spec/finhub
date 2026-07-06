@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub — Tài chính · Đầu tư · Cộng đồng</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap" id="home"></main>
+<div id="site-footer"></div>
+
+<script src="/js/app.js?v=4"></script>
+<script>
+async function loadHome(){
+  await initChrome('nav_home');
+  const main = document.getElementById('home');
+  main.innerHTML = `<p class="muted" style="padding:30px 0">${t('loading')}</p>`;
+  const { articles } = await api('/api/articles');
+  const L = LANG;
+  const title = a => a['title_'+L], dek = a => a['dek_'+L], sec = a => a['section_'+L];
+
+  const lead = articles.find(a=>a.lead) || articles[0];
+  const rail = articles.filter(a=>a!==lead).slice(0,3);
+  const rest = articles.filter(a=>a!==lead && !rail.includes(a));
+
+  const lockTag = a => a.premium ? `<span class="lock-tag">${t('members_only')}</span> ` : '';
+
+  const heroHTML = `
+    <section class="hero">
+      <div class="lead">
+        <div class="kicker">${lockTag(lead)}${sec(lead)}</div>
+        <a href="/article.html?id=${lead.id}"><h1>${title(lead)}</h1></a>
+        <div class="dek">${dek(lead)}</div>
+        <div class="byline">${t('by')} ${lead.author} · ${readMins(lead.dek_vi)+4} ${t('min_read')}</div>
+      </div>
+      <div class="rail">
+        ${rail.map(a=>`
+          <div class="item">
+            <div class="kicker">${lockTag(a)}${sec(a)}</div>
+            <a href="/article.html?id=${a.id}"><h3>${title(a)}</h3></a>
+            <div class="byline">${t('by')} ${a.author}</div>
+          </div>`).join('')}
+      </div>
+    </section>`;
+
+  const gridHTML = `
+    <div class="section-head"><h2>${t('latest')}</h2></div>
+    <div class="grid">
+      ${rest.map(a=>`
+        <article class="card">
+          <div class="kicker">${lockTag(a)}${sec(a)}</div>
+          <a href="/article.html?id=${a.id}"><h3>${title(a)}</h3></a>
+          <div class="dek">${dek(a)}</div>
+          <div class="byline">${t('by')} ${a.author} · ${fmtDate(a.createdAt)}</div>
+        </article>`).join('')}
+    </div>`;
+
+  main.innerHTML = heroHTML + gridHTML;
+}
+loadHome();
+</script>
+</body>
+</html>

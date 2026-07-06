@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinHub — Thị trường</title>
+<link rel="stylesheet" href="/css/style.css?v=4">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main class="wrap" style="padding-bottom:50px">
+  <section class="market-hero">
+    <div class="kicker" id="k-kicker">THỊ TRƯỜNG TRỰC TIẾP</div>
+    <h1 id="k-title">Theo dõi thị trường</h1>
+    <p class="dek" id="k-dek">Chỉ số, cổ phiếu, vàng, tỷ giá và tiền số — cập nhật theo thời gian thực.</p>
+  </section>
+
+  <!-- VN-Index REAL data (server proxy: TCBS/VNDIRECT) -->
+  <div class="tv-box" style="margin:22px 0 26px">
+    <div class="tv-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <span id="vn-head">VN-INDEX — DỮ LIỆU VIỆT NAM THẬT</span>
+      <span style="font-weight:400;text-transform:none;letter-spacing:0">
+        <input id="vn-symbol" type="text" value="VNINDEX" style="width:130px;padding:5px 9px;font-size:12px" placeholder="VNINDEX, FPT, HPG…">
+        <button class="btn small red" onclick="loadVN()">Xem</button>
+      </span>
+    </div>
+    <div style="padding:16px 18px">
+      <div id="vn-kpi" style="font-family:var(--sans);margin-bottom:12px;min-height:30px"></div>
+      <div style="position:relative;height:360px"><canvas id="vn-chart"></canvas></div>
+      <div id="vn-msg" class="muted" style="font-family:var(--sans);font-size:12px;margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="tv-grid">
+    <!-- Advanced chart: VN-Index -->
+    <div class="tv-box">
+      <div class="tv-head" id="h-chart">Biểu đồ VN-Index</div>
+      <div class="tv-body">
+        <div class="tradingview-widget-container" style="height:100%;width:100%">
+          <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+          {
+          "autosize": true,
+          "symbol": "HOSE:VNINDEX",
+          "interval": "D",
+          "timezone": "Asia/Ho_Chi_Minh",
+          "theme": "light",
+          "style": "1",
+          "locale": "vi_VN",
+          "hide_side_toolbar": true,
+          "allow_symbol_change": true,
+          "support_host": "https://www.tradingview.com"
+          }
+          </script>
+        </div>
+      </div>
+    </div>
+
+    <!-- Market overview -->
+    <div class="tv-box">
+      <div class="tv-head" id="h-overview">Tổng quan thị trường</div>
+      <div class="tv-body">
+        <div class="tradingview-widget-container" style="height:100%;width:100%">
+          <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+          {
+          "colorTheme": "light",
+          "dateRange": "12M",
+          "showChart": true,
+          "locale": "vi_VN",
+          "isTransparent": true,
+          "showSymbolLogo": true,
+          "width": "100%",
+          "height": "100%",
+          "tabs": [
+            { "title": "Chỉ số", "symbols": [
+              {"s":"FOREXCOM:SPXUSD","d":"S&P 500"},
+              {"s":"NASDAQ:NDX","d":"Nasdaq 100"},
+              {"s":"TVC:DJI","d":"Dow Jones"},
+              {"s":"TVC:GOLD","d":"Vàng"},
+              {"s":"HOSE:VNINDEX","d":"VN-Index"},
+              {"s":"HNX:HNXINDEX","d":"HNX-Index"}
+            ]},
+            { "title": "Ngoại tệ & Vàng", "symbols": [
+              {"s":"FX_IDC:USDVND","d":"USD/VND"},
+              {"s":"TVC:GOLD","d":"Vàng"},
+              {"s":"TVC:DXY","d":"Chỉ số USD"},
+              {"s":"FX:EURUSD","d":"EUR/USD"}
+            ]},
+            { "title": "Tiền số", "symbols": [
+              {"s":"BINANCE:BTCUSDT","d":"Bitcoin"},
+              {"s":"BINANCE:ETHUSDT","d":"Ethereum"}
+            ]}
+          ]
+          }
+          </script>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multi-symbol overview: gold, usd, btc -->
+  <div class="tv-box short" style="margin-bottom:26px">
+    <div class="tv-head" id="h-symbols">Vàng · USD/VND · Bitcoin</div>
+    <div class="tv-body">
+      <div class="tradingview-widget-container" style="height:100%;width:100%">
+        <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+        {
+        "symbols": [
+          ["Vàng","TVC:GOLD|12M"],
+          ["USD/VND","FX_IDC:USDVND|12M"],
+          ["Bitcoin","BINANCE:BTCUSDT|12M"]
+        ],
+        "chartOnly": false,
+        "width": "100%",
+        "height": "100%",
+        "locale": "vi_VN",
+        "colorTheme": "light",
+        "isTransparent": true,
+        "autosize": true,
+        "showVolume": false,
+        "showMA": false,
+        "fontColor": "rgba(106, 109, 120, 1)",
+        "gridLineColor": "rgba(217, 217, 210, 0.5)",
+        "dateFormat": "dd/MM/yy"
+        }
+        </script>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crypto board: reliable Screener widget -->
+  <div class="tv-box" style="margin-bottom:20px">
+    <div class="tv-head" id="h-screener">Bảng giá tiền số</div>
+    <div class="tv-body" style="height:560px">
+      <div class="tradingview-widget-container" style="height:100%;width:100%">
+        <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-screener.js" async>
+        {
+        "width": "100%",
+        "height": "100%",
+        "defaultColumn": "overview",
+        "screener_type": "crypto_mkt",
+        "displayCurrency": "USD",
+        "colorTheme": "light",
+        "isTransparent": true,
+        "market": "crypto",
+        "showToolbar": true,
+        "locale": "vi_VN"
+        }
+        </script>
+      </div>
+    </div>
+  </div>
+
+  <p class="macro-note">Dữ liệu thị trường do <b>TradingView</b> cung cấp, cập nhật theo thời gian thực trong giờ giao dịch (có thể trễ vài phút tùy sàn). Cần kết nối internet để hiển thị. Lưu ý: chỉ số Việt Nam (VN-Index/HNX) có thể hiện "Chưa có dữ liệu" vì TradingView bản miễn phí không phủ dữ liệu sàn HOSE — các mục quốc tế, vàng, tỷ giá và crypto vẫn chạy bình thường. Đây là thông tin tham khảo, không phải lời khuyên đầu tư.</p>
+</main>
+<div id="site-footer"></div>
+
+<script src="/js/app.js?v=4"></script>
+<script>
+(async function(){
+  await initChrome('nav_market');
+  if(LANG === 'en'){
+    document.getElementById('k-kicker').textContent = 'LIVE MARKETS';
+    document.getElementById('k-title').textContent = 'Market tracker';
+    document.getElementById('k-dek').textContent = 'Indices, equities, gold, FX and crypto — updated in real time.';
+    document.getElementById('h-chart').textContent = 'VN-Index chart';
+    document.getElementById('h-overview').textContent = 'Market overview';
+    document.getElementById('h-symbols').textContent = 'Gold · USD/VND · Bitcoin';
+    document.getElementById('h-screener').textContent = 'Crypto screener';
+  }
+})();
+</script>
+
+<script>
+let vnChart=null;
+async function loadVN(){
+  const sym=(document.getElementById('vn-symbol').value||'VNINDEX').trim().toUpperCase();
+  const msg=document.getElementById('vn-msg'), kpi=document.getElementById('vn-kpi');
+  msg.textContent='Đang tải dữ liệu '+sym+'…';
+  try{
+    const r=await fetch('/api/market/history?symbol='+encodeURIComponent(sym));
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Lỗi tải dữ liệu');
+    const c=d.candles; if(!c||!c.length) throw new Error('Không có dữ liệu');
+    const last=c[c.length-1], prev=c[c.length-2]||last;
+    const chg=last.c-prev.c, pct=prev.c?(chg/prev.c*100):0, up=chg>=0;
+    kpi.innerHTML='<span style="font-size:28px;font-weight:800;font-family:var(--display)">'+last.c.toLocaleString('vi-VN')+'</span> '+
+      '<span style="font-weight:700;color:'+(up?'#0f7a3d':'#E3120B')+'">'+(up?'▲ +':'▼ ')+chg.toFixed(2)+' ('+(up?'+':'')+pct.toFixed(2)+'%)</span>'+
+      '<span class="muted" style="font-size:12px"> · phiên '+new Date(last.t*1000).toLocaleDateString('vi-VN')+'</span>';
+    const labels=c.map(x=>new Date(x.t*1000).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}));
+    if(vnChart) vnChart.destroy();
+    vnChart=new Chart(document.getElementById('vn-chart'),{type:'line',
+      data:{labels,datasets:[{data:c.map(x=>x.c),borderColor:up?'#0f7a3d':'#E3120B',
+        backgroundColor:up?'rgba(15,122,61,.10)':'rgba(227,18,11,.10)',borderWidth:2,tension:.25,pointRadius:0,fill:true}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c2=>' '+Number(c2.raw).toLocaleString('vi-VN')}}},
+        scales:{x:{grid:{display:false},ticks:{maxTicksLimit:10,font:{family:'Inter',size:10},color:'#6b6b6b'}},
+                y:{grid:{color:'rgba(217,217,210,.6)'},ticks:{font:{family:'Inter',size:10},color:'#6b6b6b'}}}}});
+    msg.textContent='Nguồn: '+(d.source||'VN')+' · dữ liệu cuối phiên (cache 5 phút). Nhập mã khác (FPT, HPG, VNM, VN30, HNXINDEX…) rồi bấm Xem.';
+  }catch(e){
+    if(vnChart){vnChart.destroy();vnChart=null;}
+    kpi.innerHTML='';
+    msg.innerHTML='⚠️ '+e.message+'. Máy chạy web cần vào được API chứng khoán VN (apipubaws.tcbs.com.vn / dchart-api.vndirect.com.vn). Kiểm tra internet rồi bấm Xem lại.';
+  }
+}
+loadVN();
+</script>
+
+<script>
+// Fallback: if a TradingView widget fails to load (ad-blocker/network), show a hint.
+setTimeout(function(){
+  document.querySelectorAll('.tradingview-widget-container').forEach(function(c){
+    if(!c.querySelector('iframe')){
+      var el=document.createElement('div');
+      el.style.cssText='padding:24px;text-align:center;font-family:Inter,sans-serif;font-size:13px;color:#6b6b6b';
+      el.innerHTML='⚠️ Không tải được dữ liệu TradingView.<br>Hãy <b>tắt trình chặn quảng cáo</b> (uBlock/AdBlock) cho trang này và tải lại, hoặc kiểm tra kết nối internet.';
+      c.appendChild(el);
+    }
+  });
+}, 5000);
+</script>
+</body>
+</html>
