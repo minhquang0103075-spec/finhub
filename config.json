@@ -1,0 +1,15 @@
+{
+  "_huong_dan": "Sửa các giá trị bên dưới rồi lưu lại. Sau đó khởi động lại server (npm start).",
+  "site": {
+    "name": "FinHub"
+  },
+  "bank": {
+    "bankId": "MB",
+    "accountNo": "0123456789",
+    "accountName": "CONG TY FINHUB"
+  },
+  "webhook": {
+    "enabled": false,
+    "secret": "doi-chuoi-bi-mat-nay"
+  }
+}
